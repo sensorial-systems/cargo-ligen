@@ -23,7 +23,8 @@ fn main() {
                         .template("{spinner:.blue} {msg}"),
                 );
                 pb.set_message("Cleaning...");
-
+                
+                // FIXME: Why is this needed?
                 let out = Command::new("cargo").arg("clean").output();
 
                 if let Ok(_) = out {
