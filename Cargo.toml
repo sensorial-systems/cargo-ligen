@@ -5,3 +5,5 @@ authors = ["Danilo Guanabara <danguafer@gmail.com>", "Gabriel Arruda <arrudagate
 edition = "2018"
 
 [dependencies]
+cargo_toml = "0.9.1"
+indicatif = "0.16.0"
