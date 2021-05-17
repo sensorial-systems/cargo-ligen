@@ -33,6 +33,6 @@ fn main() {
             panic!("Current directory is not a Cargo project");
         }
     } else {
-        panic!("Failed to run cargo build");
+        panic!("Cargo.toml wasn't found in the current directory.");
     }
 }
