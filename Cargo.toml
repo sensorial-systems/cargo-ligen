@@ -6,4 +6,3 @@ edition = "2018"
 
 [dependencies]
 cargo_toml = "0.9.1"
-indicatif = "0.16.0"
