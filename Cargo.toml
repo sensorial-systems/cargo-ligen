@@ -3,7 +3,9 @@ name = "cargo-ligen"
 version = "0.1.0"
 authors = ["Danilo Guanabara <danguafer@gmail.com>", "Gabriel Arruda <arrudagates@gmail.com>"]
 edition = "2018"
+license = "Apache-2.0"
 repository = "https://github.com/sensorial-systems/cargo-ligen/"
+description = "Cargo command for Ligen (https://github.com/sensorial-systems/ligen)"
 
 [dependencies]
 cargo_toml = "0.9.1"
