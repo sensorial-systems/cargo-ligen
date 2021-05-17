@@ -3,6 +3,7 @@ name = "cargo-ligen"
 version = "0.1.0"
 authors = ["Danilo Guanabara <danguafer@gmail.com>", "Gabriel Arruda <arrudagates@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/sensorial-systems/cargo-ligen/"
 
 [dependencies]
 cargo_toml = "0.9.1"
