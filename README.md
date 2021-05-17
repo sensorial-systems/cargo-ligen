@@ -4,5 +4,5 @@ Cargo command for [LIGEN (Language Interface GENerator)](https://github.com/sens
 
 ## Installation
 ```
-cargo install --path .
+cargo install cargo-ligen
 ```
