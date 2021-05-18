@@ -24,6 +24,12 @@ fn main() {
                 .expect("Failed to parse package section from Cargo.toml")
                 .name;
 
+            #[cfg(target_family = "windows")]
+            let name = format!("{}.lib", name);
+
+            #[cfg(target_family = "unix")]
+            let name = format!("lib{}.a", name);
+
             copy(
                 format!(
                     "./target/{}/lib{}.a",
@@ -37,7 +43,7 @@ fn main() {
                     },
                     name
                 ),
-                format!("./target/ligen/{0}/lib/lib{0}.a", name),
+                format!("./target/ligen/{}/lib/{}", name, file_name),
             )
             .expect("Failed to copy lib");
         } else {
