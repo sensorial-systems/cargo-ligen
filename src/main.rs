@@ -25,7 +25,18 @@ fn main() {
                 .name;
 
             copy(
-                format!("./target/debug/lib{}.a", name),
+                format!(
+                    "./target/{}/lib{}.a",
+                    if env_args
+                        .into_iter()
+                        .any(|arg| arg == String::from("--release"))
+                    {
+                        "release"
+                    } else {
+                        "debug"
+                    },
+                    name
+                ),
                 format!("./target/ligen/{0}/lib/lib{0}.a", name),
             )
             .expect("Failed to copy lib");
