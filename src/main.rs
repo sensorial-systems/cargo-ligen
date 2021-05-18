@@ -25,10 +25,10 @@ fn main() {
                 .name;
 
             #[cfg(target_family = "windows")]
-            let name = format!("{}.lib", name);
+            let file_name = format!("{}.lib", name);
 
             #[cfg(target_family = "unix")]
-            let name = format!("lib{}.a", name);
+            let file_name = format!("lib{}.a", name);
 
             copy(
                 format!(
