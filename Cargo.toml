@@ -1,6 +1,6 @@
 [package]
 name = "cargo-ligen"
-version = "0.1.4-alpha.0"
+version = "0.1.4"
 authors = ["Danilo Guanabara <danguafer@gmail.com>", "Gabriel Arruda <arrudagates@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0"
