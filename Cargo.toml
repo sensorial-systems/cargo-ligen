@@ -8,4 +8,5 @@ repository = "https://github.com/sensorial-systems/cargo-ligen/"
 description = "Cargo command for Ligen (https://github.com/sensorial-systems/ligen)"
 
 [dependencies]
+ligen-core = { path = "../ligen/core" }
 cargo_toml = "0.9.1"

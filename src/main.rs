@@ -1,101 +1,92 @@
+mod error;
+mod environment;
+mod utils;
+pub use error::Error;
+pub use environment::*;
+pub use utils::*;
+
 use cargo_toml::Manifest;
 use std::{
-    env,
-    fs::{copy, read_dir},
-    path::{Path, PathBuf},
+    fs::copy,
     process::{Command, Stdio},
 };
-
-fn find_workspace(path: &Path) -> Option<PathBuf> {
-    let mut iter = path.ancestors();
-    iter.next();
-    while let Some(parent) = iter.next() {
-        if let Ok(manifest) = Manifest::from_path(parent.join("Cargo.toml")) {
-            if let Some(_worspace) = manifest.workspace {
-                return Some(parent.to_path_buf());
-            }
-        }
-    }
-    return None;
-}
+use std::path::PathBuf;
+use std::fs::create_dir_all;
 
 fn main() {
-    let original_path = env::current_dir().expect("Failed to fetch original directory");
-    let mut manifest_path = PathBuf::new();
-    if let Some(workspace_path) =
-        find_workspace(&env::current_dir().expect("Failed to fetch current directory"))
-    {
-        manifest_path.push(workspace_path);
-    } else {
-        manifest_path.push("./")
-    }
+    let environment = Environment::parse().expect("Couldn't parse environment variables.");
+    build(&environment).expect("Failed to build.");
 
-    let mut args = vec![String::from("+nightly"), String::from("build")];
-    let env_args: Vec<String> = env::args().collect();
-    args.extend_from_slice(env_args.get(2..env_args.len()).unwrap());
-    if manifest_path.join("Cargo.toml").exists() {
-        env::set_current_dir(&manifest_path)
-            .expect("Failed to set current working directory to the manifest path");
-        println!("current_dir: {:#?}", &env::current_dir());
-        let output = Command::new("cargo")
-            .args(args.as_slice())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .output();
-
-        if let Ok(_) = output {
-            let name = Manifest::from_path(original_path.join("Cargo.toml"))
-                .expect("Failed to parse Cargo.toml")
-                .package
-                .expect("Failed to parse package section from Cargo.toml")
-                .name;
-
-            #[cfg(target_family = "windows")]
-            let file_name = format!("{}.lib", name);
-
-            #[cfg(target_family = "unix")]
-            let file_name = format!("lib{}.a", name);
-
-            let build_dir = manifest_path.join(format!(
-                "target/{}/",
-                if env_args
-                    .into_iter()
-                    .any(|arg| arg == String::from("--release"))
-                {
-                    "release"
-                } else {
-                    "debug"
-                }
-            ));
-
-            let lib_paths = read_dir(build_dir).unwrap().filter_map(|entry| {
-                if let Ok(dir_entry) = entry {
-                    if let Some(extension) = dir_entry.path().extension() {
-                        if extension == "a" {
-                            Some(dir_entry.path())
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            });
-
-            lib_paths.for_each(|path| {
-                println!("{:#?}", path);
-                copy(
-                    path,
-                    manifest_path.join(format!("target/ligen/{}/lib/{}", name, file_name)),
-                )
-                .expect("Failed to copy lib");
-            });
-        } else {
-            panic!("Current directory is not a Cargo project");
+    if environment.arguments.workspace_path.as_ref() == Some(&environment.arguments.manifest_path) {
+        let manifest = Manifest::from_path(&environment.arguments.manifest_path).expect("Couldn't parse the workspace Cargo.toml manifest.");
+        let workspace = manifest.workspace.expect("Couldn't get the workspace members.");
+        let manifest_dir = environment.arguments.manifest_path.parent().expect("Couldn't get manifest dir.");
+        for member in workspace.members {
+            let member_toml = manifest_dir.join(member).join("Cargo.toml");
+            copy_crate_libraries(&environment, &member_toml).expect("Couldn't copy libraries.");
         }
     } else {
-        panic!("Cargo.toml wasn't found in the current directory.");
+        copy_crate_libraries(&environment, &environment.arguments.manifest_path).expect("Couldn't copy libraries.");
+    }
+}
+
+pub fn build(environment: &Environment) -> Result<(), Error> {
+    environment.arguments.to_env();
+
+    let output = Command::new("cargo")
+        .arg("+nightly")
+        .arg("build")
+        .args(&environment.raw_arguments.values)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .expect("Couldn't run cargo build.");
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(Error::ExecutionFailure(output.status.code().expect("Couldn't get execution status code.")))
+    }
+}
+
+fn copy_crate_libraries(environment: &Environment, cargo_toml: &PathBuf) -> Result<(), Error> {
+    if cargo_toml.exists() {
+        let manifest = Manifest::from_path(cargo_toml)
+            .expect(&format!("Failed to parse {}", cargo_toml.display()));
+
+        let name = manifest
+            .package
+            .expect("Failed to parse package section from Cargo.toml")
+            .name;
+
+        let file_name = to_library_name_convention(&name);
+
+        let from_path = environment.arguments.target_dir
+            .join(environment.arguments.build_type.to_string().to_lowercase())
+            .join(&file_name);
+
+        let to_path = environment.arguments.target_dir
+            .join("ligen")
+            .join(name)
+            .join("lib")
+            .join(file_name);
+
+        let to_dir = to_path
+            .parent()
+            .expect(&format!("Couldn't get directory of {}", to_path.display()));
+
+        create_dir_all(to_dir)
+            .expect(&format!("Couldn't create {}.", to_dir.display()));
+
+        // TODO: Add a better mechanism to detect if the crate implements ligen and only copy the
+        //  static library if so.
+        if from_path.exists() {
+            copy(&from_path, &to_path)
+                .expect(&format!("Failed to copy file from {:?} to {:?}", from_path, to_path));
+        }
+
+        Ok(())
+    } else {
+        Err(Error::ExecutionFailure(-1))
     }
 }
