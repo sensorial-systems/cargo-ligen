@@ -38,18 +38,20 @@ impl TryFrom<RawArguments> for Arguments {
             .map(|_| BuildType::Release)
             .unwrap_or(BuildType::Debug);
 
-        let name = Manifest::from_path(&manifest_path)
-            .expect(&format!("Failed to parse {}", manifest_path.display()))
-            .package
-            .expect("Failed to parse package section from Cargo.toml")
-            .name;
-
-        Ok(Self {
-            name,
-            build_type,
-            target_dir,
-            manifest_path,
-            workspace_path,
-        })
+        match Manifest::from_path(&manifest_path) {
+            Ok(manifest) => match manifest.package {
+                Some(package) => Ok(Self {
+                    crate_name: package.name,
+                    build_type,
+                    target_dir,
+                    manifest_path,
+                    workspace_path,
+                }),
+                None => Err(Error::String(
+                    "Couldn't find package information on Cargo.toml".to_string(),
+                )),
+            },
+            Err(error) => Err(Self::Error::from(error)),
+        }
     }
 }
