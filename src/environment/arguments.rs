@@ -1,7 +1,8 @@
-use crate::{Error, RawArguments, find_workspace_dir};
-use std::path::PathBuf;
-use std::convert::TryFrom;
+use crate::{find_workspace_dir, Error, RawArguments};
+use cargo_toml::Manifest;
 use ligen_core::proc_macro::{Arguments, BuildType};
+use std::convert::TryFrom;
+use std::path::PathBuf;
 
 impl TryFrom<RawArguments> for Arguments {
     type Error = Error;
@@ -20,7 +21,13 @@ impl TryFrom<RawArguments> for Arguments {
             .unwrap_or_else(|| {
                 workspace_dir
                     .clone()
-                    .unwrap_or(manifest_path.clone())
+                    .unwrap_or(
+                        manifest_path
+                            .clone()
+                            .parent()
+                            .expect("Failed to parse path of the manifest file")
+                            .into(),
+                    )
                     .join("target")
             });
 
@@ -31,6 +38,20 @@ impl TryFrom<RawArguments> for Arguments {
             .map(|_| BuildType::Release)
             .unwrap_or(BuildType::Debug);
 
-        Ok(Self { build_type, target_dir, manifest_path, workspace_path })
+        match Manifest::from_path(&manifest_path) {
+            Ok(manifest) => match manifest.package {
+                Some(package) => Ok(Self {
+                    crate_name: package.name,
+                    build_type,
+                    target_dir,
+                    manifest_path,
+                    workspace_path,
+                }),
+                None => Err(Error::String(
+                    "Couldn't find package information on Cargo.toml".to_string(),
+                )),
+            },
+            Err(error) => Err(Self::Error::from(error)),
+        }
     }
 }
