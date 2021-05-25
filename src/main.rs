@@ -14,13 +14,11 @@ use std::{
 };
 
 fn main() {
-    let mut environment = Environment::parse().expect("Couldn't parse environment variables.");
-
     if let Some(workspace_dir) =
         find_workspace_dir(&env::current_dir().expect("Couldn't get current dir"))
     {
         std::env::set_current_dir(&workspace_dir).expect("Couldn't change directory");
-        environment = Environment::parse().expect("Couldn't parse environment variables.");
+        let environment = Environment::parse().expect("Couldn't parse environment variables.");
 
         let manifest = Manifest::from_path(workspace_dir.join("Cargo.toml"))
             .expect("Couldn't parse the workspace Cargo.toml manifest.");
@@ -43,6 +41,7 @@ fn main() {
             copy_crate_libraries(&environment, &member_toml).expect("Couldn't copy libraries.");
         }
     } else {
+        let environment = Environment::parse().expect("Couldn't parse environment variables.");
         build(&environment).expect("Failed to build.");
         copy_crate_libraries(&environment, &environment.arguments.manifest_path)
             .expect("Couldn't copy libraries.");
