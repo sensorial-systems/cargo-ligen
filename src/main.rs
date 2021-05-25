@@ -15,6 +15,7 @@ use std::{
 
 fn main() {
     let mut environment = Environment::parse().expect("Couldn't parse environment variables.");
+
     if let Some(workspace_dir) =
         find_workspace_dir(&env::current_dir().expect("Couldn't get current dir"))
     {
@@ -26,7 +27,11 @@ fn main() {
         let workspace = manifest
             .workspace
             .expect("Couldn't get the workspace members.");
-
+        let manifest_dir = environment
+            .arguments
+            .manifest_path
+            .parent()
+            .expect("Couldn't get manifest dir.");
         for member in workspace.members {
             std::env::set_current_dir(workspace_dir.join(&member))
                 .expect("Couldn't change directory");
@@ -34,27 +39,11 @@ fn main() {
                 Environment::parse().expect("Couldn't parse environment variables.");
             member_env.arguments.target_dir = workspace_dir.join("target/");
             build(&member_env).expect("Failed to build.");
-        }
-    } else {
-        build(&environment).expect("Failed to build.");
-    }
-
-    if environment.arguments.workspace_path.as_ref() == Some(&environment.arguments.manifest_path) {
-        let manifest = Manifest::from_path(&environment.arguments.manifest_path)
-            .expect("Couldn't parse the workspace Cargo.toml manifest.");
-        let workspace = manifest
-            .workspace
-            .expect("Couldn't get the workspace members.");
-        let manifest_dir = environment
-            .arguments
-            .manifest_path
-            .parent()
-            .expect("Couldn't get manifest dir.");
-        for member in workspace.members {
             let member_toml = manifest_dir.join(member).join("Cargo.toml");
             copy_crate_libraries(&environment, &member_toml).expect("Couldn't copy libraries.");
         }
     } else {
+        build(&environment).expect("Failed to build.");
         copy_crate_libraries(&environment, &environment.arguments.manifest_path)
             .expect("Couldn't copy libraries.");
     }
