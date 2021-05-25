@@ -33,9 +33,7 @@ fn main() {
         for member in workspace.members {
             std::env::set_current_dir(workspace_dir.join(&member))
                 .expect("Couldn't change directory");
-            let mut member_env =
-                Environment::parse().expect("Couldn't parse environment variables.");
-            member_env.arguments.target_dir = workspace_dir.join("target/");
+            let member_env = Environment::parse().expect("Couldn't parse environment variables.");
             build(&member_env).expect("Failed to build.");
             let member_toml = manifest_dir.join(member).join("Cargo.toml");
             copy_crate_libraries(&environment, &member_toml).expect("Couldn't copy libraries.");
@@ -104,8 +102,6 @@ fn copy_crate_libraries(environment: &Environment, cargo_toml: &PathBuf) -> Resu
 
         create_dir_all(to_dir).expect(&format!("Couldn't create {}.", to_dir.display()));
 
-        // TODO: Add a better mechanism to detect if the crate implements ligen and only copy the
-        //  static library if so.
         if from_path.exists() {
             copy(&from_path, &to_path).expect(&format!(
                 "Failed to copy file from {:?} to {:?}",
