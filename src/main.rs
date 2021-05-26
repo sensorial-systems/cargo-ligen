@@ -19,10 +19,10 @@ fn main() {
     let manifest = Manifest::from_path(&arguments.manifest_path).expect("Couldn't parse Cargo.toml manifest.");
     if let Some(workspace) = manifest.workspace {
         let members = arguments
-            .workpace_member
+            .workspace_member_package_id
             .clone()
-            .map(|member| vec![member]) // We only build the selected workspace member.
-            .unwrap_or(workspace.members); // We build all the workspace members.
+            .map(|package_id| vec![package_id]) // We only build the selected workspace member.
+            .unwrap_or_else(|| collect_members_package_ids(&environment, workspace.members)); // We build all the workspace members.
         for member in members {
             build_workspace_member(&environment, &member).expect("Couldn't build workspace member.")
         }
@@ -31,6 +31,27 @@ fn main() {
         copy_crate_libraries(&environment, &environment.arguments.manifest_path)
             .expect("Couldn't copy libraries.");
     }
+}
+
+pub fn collect_members_package_ids(environment: &Environment, members: Vec<String>) -> Vec<String> {
+    let manifest_dir = environment
+        .arguments
+        .manifest_path
+        .parent()
+        .expect("Couldn't get manifest dir.");
+    members
+        .iter()
+        .filter_map(|member| {
+            let cargo_path = manifest_dir
+                .join(member)
+                .join("Cargo.toml");
+            Manifest::from_path(cargo_path)
+                .ok()
+                .and_then(|manifest| manifest.package)
+        })
+        .map(|package| {
+            package.name
+        }).collect()
 }
 
 pub fn build_workspace_member(environment: &Environment, member: &String) -> Result<(), Error> {
