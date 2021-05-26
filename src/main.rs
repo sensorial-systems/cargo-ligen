@@ -138,12 +138,6 @@ fn copy_crate_libraries(environment: &Environment, cargo_toml: &PathBuf) -> Resu
             .join("lib")
             .join(file_name);
 
-        let to_dir = to_path
-            .parent()
-            .expect(&format!("Couldn't get directory of {}", to_path.display()));
-
-        create_dir_all(to_dir).expect(&format!("Couldn't create {}.", to_dir.display()));
-
         if from_path.exists() {
             copy(&from_path, &to_path).expect(&format!(
                 "Failed to copy file from {:?} to {:?}",
