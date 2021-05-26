@@ -91,6 +91,7 @@ pub fn build_workspace_member(
 pub fn build(environment: &Environment) -> Result<(), Error> {
     environment.arguments.to_env();
 
+    std::env::set_var("RUSTFLAGS", "--cfg cargo_ligen");
     let output = Command::new("cargo")
         .arg("+nightly")
         .arg("build")
