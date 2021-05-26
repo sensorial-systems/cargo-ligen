@@ -33,6 +33,7 @@ impl RawArguments {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Environment {
     pub current_dir: PathBuf,
     pub raw_arguments: RawArguments,

@@ -14,6 +14,9 @@ impl TryFrom<RawArguments> for Arguments {
             .unwrap_or(current_dir.join("Cargo.toml"));
 
         let workspace_dir = find_workspace_dir(&manifest_path);
+        let workpace_member = raw_arguments
+            .find_pair("--package")
+            .or_else(|| raw_arguments.find_pair("-p"));
 
         let target_dir = raw_arguments
             .find_pair("--target-dir")
@@ -46,6 +49,7 @@ impl TryFrom<RawArguments> for Arguments {
                     target_dir,
                     manifest_path,
                     workspace_path,
+                    workpace_member,
                 }),
                 None => match manifest.workspace {
                     Some(_) => Ok(Self {
@@ -54,6 +58,7 @@ impl TryFrom<RawArguments> for Arguments {
                         target_dir,
                         manifest_path,
                         workspace_path,
+                        workpace_member,
                     }),
                     None => Err(Error::String(
                         "Couldn't find package/workspace information on Cargo.toml".to_string(),

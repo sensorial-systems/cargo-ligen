@@ -7,46 +7,47 @@ pub use utils::*;
 
 use cargo_toml::Manifest;
 use std::path::PathBuf;
-use std::{env, fs::create_dir_all};
+use std::fs::create_dir_all;
 use std::{
     fs::copy,
     process::{Command, Stdio},
 };
 
 fn main() {
-    if let Some(workspace) = Manifest::from_path(
-        &env::current_dir()
-            .expect("Couldn't get current dir")
-            .join("Cargo.toml"),
-    )
-    .expect("Couldn't parse Cargo.toml manifest.")
-    .workspace
-    {
-        let environment = Environment::parse().expect("Couldn't parse environment variables.");
-
-        let manifest_dir = environment
-            .arguments
-            .manifest_path
-            .parent()
-            .expect("Couldn't get manifest dir.");
-        for member in workspace.members {
-            let member_toml = manifest_dir.join(member.clone()).join("Cargo.toml");
-            let mut member_env =
-                Environment::parse().expect("Couldn't parse environment variables.");
-            member_env
-                .raw_arguments
-                .values
-                .append(&mut vec!["-p".to_string(), member.clone()]);
-            member_env.arguments.crate_name = member;
-            build(&member_env).expect("Failed to build.");
-            copy_crate_libraries(&member_env, &member_toml).expect("Couldn't copy libraries.");
+    let environment = Environment::parse().expect("Couldn't parse environment variables.");
+    let arguments = &environment.arguments;
+    let manifest = Manifest::from_path(&arguments.manifest_path).expect("Couldn't parse Cargo.toml manifest.");
+    if let Some(workspace) = manifest.workspace {
+        let members = arguments
+            .workpace_member
+            .clone()
+            .map(|member| vec![member]) // We only build the selected workspace member.
+            .unwrap_or(workspace.members); // We build all the workspace members.
+        for member in members {
+            build_workspace_member(&environment, &member).expect("Couldn't build workspace member.")
         }
     } else {
-        let environment = Environment::parse().expect("Couldn't parse environment variables.");
         build(&environment).expect("Failed to build.");
         copy_crate_libraries(&environment, &environment.arguments.manifest_path)
             .expect("Couldn't copy libraries.");
     }
+}
+
+pub fn build_workspace_member(environment: &Environment, member: &String) -> Result<(), Error> {
+    let manifest_dir = environment
+        .arguments
+        .manifest_path
+        .parent()
+        .expect("Couldn't get manifest dir.");
+    let member_toml = manifest_dir.join(member.clone()).join("Cargo.toml");
+    let mut member_env = environment.clone();
+    member_env
+        .raw_arguments
+        .values
+        .append(&mut vec!["--package".to_string(), member.clone()]);
+    member_env.arguments.crate_name = member.clone();
+    build(&member_env)?;
+    copy_crate_libraries(&member_env, &member_toml)
 }
 
 pub fn build(environment: &Environment) -> Result<(), Error> {
