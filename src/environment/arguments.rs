@@ -47,9 +47,18 @@ impl TryFrom<RawArguments> for Arguments {
                     manifest_path,
                     workspace_path,
                 }),
-                None => Err(Error::String(
-                    "Couldn't find package information on Cargo.toml".to_string(),
-                )),
+                None => match manifest.workspace {
+                    Some(_) => Ok(Self {
+                        crate_name: "workspace".into(),
+                        build_type,
+                        target_dir,
+                        manifest_path,
+                        workspace_path,
+                    }),
+                    None => Err(Error::String(
+                        "Couldn't find package/workspace information on Cargo.toml".to_string(),
+                    )),
+                },
             },
             Err(error) => Err(Self::Error::from(error)),
         }
