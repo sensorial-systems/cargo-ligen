@@ -12,10 +12,16 @@ use std::{
     process::{Command, Stdio},
 };
 
+#[derive(Debug, Clone)]
+pub struct WorkspaceMember {
+    toml_path: PathBuf,
+    crate_name: String
+}
+
 fn main() {
     let environment = Environment::parse().expect("Couldn't parse environment variables.");
     let arguments = &environment.arguments;
-    if &environment.raw_arguments.values[0] == "test" {
+    if environment.raw_arguments.values.get(0).filter(|arg| *arg == "test").is_some() {
         test(&environment).expect("Test failed to run");
     } else {
         let manifest = Manifest::from_path(&arguments.manifest_path)
@@ -29,7 +35,7 @@ fn main() {
                     vec![member_package_ids
                         .clone()
                         .into_iter()
-                        .find(|(_, package)| package == &package_id)
+                        .find(|member| member.crate_name == package_id)
                         .expect("Package not found")]
                 }) // We only build the selected workspace member.
                 .unwrap_or_else(|| member_package_ids); // We build all the workspace members.
@@ -48,7 +54,7 @@ fn main() {
 pub fn collect_members_package_ids(
     environment: &Environment,
     members: Vec<String>,
-) -> Vec<(String, String)> {
+) -> Vec<WorkspaceMember> {
     let manifest_dir = environment
         .arguments
         .manifest_path
@@ -57,39 +63,34 @@ pub fn collect_members_package_ids(
 
     members
         .clone()
-        .into_iter()
-        .zip(
-            members
-                .iter()
-                .filter_map(|member| {
-                    let cargo_path = manifest_dir.join(member).join("Cargo.toml");
-                    Manifest::from_path(cargo_path)
-                        .ok()
-                        .and_then(|manifest| manifest.package)
-                })
-                .map(|package| package.name),
-        )
+        .iter()
+        .filter_map(|member| {
+            let toml_path = manifest_dir.join(member).join("Cargo.toml");
+            Manifest::from_path(&toml_path)
+                .ok()
+                .and_then(|manifest| manifest
+                    .package
+                    .map(|package| {
+                        let crate_name = package.name;
+                        WorkspaceMember { crate_name, toml_path }
+                    })
+                )
+        })
         .collect()
 }
 
 pub fn build_workspace_member(
     environment: &Environment,
-    member: (String, String),
+    member: WorkspaceMember,
 ) -> Result<(), Error> {
-    let manifest_dir = environment
-        .arguments
-        .manifest_path
-        .parent()
-        .expect("Couldn't get manifest dir.");
-    let member_toml = manifest_dir.join(member.clone().0).join("Cargo.toml");
     let mut member_env = environment.clone();
     member_env
         .raw_arguments
         .values
-        .append(&mut vec!["--package".to_string(), member.clone().1]);
-    member_env.arguments.crate_name = member.clone().1;
+        .append(&mut vec!["--package".to_string(), member.clone().crate_name]);
+    member_env.arguments.crate_name = member.crate_name;
     build(&member_env)?;
-    copy_crate_libraries(&member_env, &member_toml)
+    copy_crate_libraries(&member_env, &member.toml_path)
 }
 
 pub fn run(environment: &Environment, command: &str) -> Result<(), Error> {
