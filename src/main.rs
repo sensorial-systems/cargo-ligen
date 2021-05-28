@@ -6,7 +6,6 @@ pub use error::Error;
 pub use utils::*;
 
 use cargo_toml::Manifest;
-use std::fs::create_dir_all;
 use std::path::PathBuf;
 use std::{
     fs::copy,
@@ -16,28 +15,33 @@ use std::{
 fn main() {
     let environment = Environment::parse().expect("Couldn't parse environment variables.");
     let arguments = &environment.arguments;
-    let manifest =
-        Manifest::from_path(&arguments.manifest_path).expect("Couldn't parse Cargo.toml manifest.");
-    if let Some(workspace) = manifest.workspace {
-        let member_package_ids = collect_members_package_ids(&environment, workspace.members);
-        let members = arguments
-            .workspace_member_package_id
-            .clone()
-            .map(|package_id| {
-                vec![member_package_ids
-                    .clone()
-                    .into_iter()
-                    .find(|(_, package)| package == &package_id)
-                    .expect("Package not found")]
-            }) // We only build the selected workspace member.
-            .unwrap_or_else(|| member_package_ids); // We build all the workspace members.
-        for member in members {
-            build_workspace_member(&environment, member).expect("Couldn't build workspace member.")
-        }
+    if &environment.raw_arguments.values[0] == "test" {
+        test(&environment).expect("Test failed to run");
     } else {
-        build(&environment).expect("Failed to build.");
-        copy_crate_libraries(&environment, &environment.arguments.manifest_path)
-            .expect("Couldn't copy libraries.");
+        let manifest = Manifest::from_path(&arguments.manifest_path)
+            .expect("Couldn't parse Cargo.toml manifest.");
+        if let Some(workspace) = manifest.workspace {
+            let member_package_ids = collect_members_package_ids(&environment, workspace.members);
+            let members = arguments
+                .workspace_member_package_id
+                .clone()
+                .map(|package_id| {
+                    vec![member_package_ids
+                        .clone()
+                        .into_iter()
+                        .find(|(_, package)| package == &package_id)
+                        .expect("Package not found")]
+                }) // We only build the selected workspace member.
+                .unwrap_or_else(|| member_package_ids); // We build all the workspace members.
+            for member in members {
+                build_workspace_member(&environment, member)
+                    .expect("Couldn't build workspace member.")
+            }
+        } else {
+            build(&environment).expect("Failed to build.");
+            copy_crate_libraries(&environment, &environment.arguments.manifest_path)
+                .expect("Couldn't copy libraries.");
+        }
     }
 }
 
@@ -88,13 +92,12 @@ pub fn build_workspace_member(
     copy_crate_libraries(&member_env, &member_toml)
 }
 
-pub fn build(environment: &Environment) -> Result<(), Error> {
+pub fn run(environment: &Environment, command: &str) -> Result<(), Error> {
     environment.arguments.to_env();
-
     std::env::set_var("RUSTFLAGS", "--cfg cargo_ligen");
     let output = Command::new("cargo")
         .arg("+nightly")
-        .arg("build")
+        .arg(command)
         .args(&environment.raw_arguments.values)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -111,6 +114,14 @@ pub fn build(environment: &Environment) -> Result<(), Error> {
                 .expect("Couldn't get execution status code."),
         ))
     }
+}
+
+pub fn build(environment: &Environment) -> Result<(), Error> {
+    run(environment, "build")
+}
+
+pub fn test(environment: &Environment) -> Result<(), Error> {
+    run(environment, "test")
 }
 
 fn copy_crate_libraries(environment: &Environment, cargo_toml: &PathBuf) -> Result<(), Error> {
