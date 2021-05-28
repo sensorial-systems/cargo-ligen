@@ -92,13 +92,12 @@ pub fn build_workspace_member(
     copy_crate_libraries(&member_env, &member_toml)
 }
 
-pub fn build(environment: &Environment) -> Result<(), Error> {
+pub fn run(environment: &Environment, command: &str) -> Result<(), Error> {
     environment.arguments.to_env();
-
     std::env::set_var("RUSTFLAGS", "--cfg cargo_ligen");
     let output = Command::new("cargo")
         .arg("+nightly")
-        .arg("build")
+        .arg(command)
         .args(&environment.raw_arguments.values)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
@@ -117,28 +116,12 @@ pub fn build(environment: &Environment) -> Result<(), Error> {
     }
 }
 
-pub fn test(environment: &Environment) -> Result<(), Error> {
-    environment.arguments.to_env();
-    std::env::set_var("RUSTFLAGS", "--cfg cargo_ligen --cfg test");
-    let output = Command::new("cargo")
-        .arg("+nightly")
-        .arg("test")
-        //.args(&["-p", "ligen-core", "-p", "ligen-c-core"])
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .expect("Couldn't run cargo build.");
+pub fn build(environment: &Environment) -> Result<(), Error> {
+    run(environment, "build")
+}
 
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(Error::ExecutionFailure(
-            output
-                .status
-                .code()
-                .expect("Couldn't get execution status code."),
-        ))
-    }
+pub fn test(environment: &Environment) -> Result<(), Error> {
+    run(environment, "test")
 }
 
 fn copy_crate_libraries(environment: &Environment, cargo_toml: &PathBuf) -> Result<(), Error> {
