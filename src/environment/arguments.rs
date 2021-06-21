@@ -1,6 +1,6 @@
 use crate::{find_workspace_dir, Error, RawArguments};
 use cargo_toml::Manifest;
-use ligen_core::proc_macro::{Arguments, BuildType};
+use ligen_core::generator::{Arguments, BuildType};
 use std::convert::TryFrom;
 use std::path::PathBuf;
 

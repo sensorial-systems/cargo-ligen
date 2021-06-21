@@ -7,8 +7,8 @@ pub use utils::*;
 
 use cargo_toml::Manifest;
 use std::path::PathBuf;
+use ligen_core::utils::fs::copy;
 use std::{
-    fs::copy,
     process::{Command, Stdio},
 };
 
