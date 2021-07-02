@@ -4,7 +4,7 @@ pub use arguments::*;
 use crate::Error;
 use std::{env, path::PathBuf};
 use std::convert::TryFrom;
-use ligen_core::generator::Arguments;
+use ligen::generator::Arguments;
 
 
 #[derive(Debug, Clone)]
