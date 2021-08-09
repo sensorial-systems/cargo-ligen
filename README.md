@@ -18,4 +18,4 @@ Note: There is no need to make it default.
 
 `cargo ligen --release` to build release libraries.
 
-Any other parameter available in `cargo build` is also available in `cargo ligen`.
+In fact, any other parameter available in `cargo build` is also available in `cargo ligen`.
