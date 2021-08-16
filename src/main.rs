@@ -7,10 +7,7 @@ pub use utils::*;
 
 use cargo_toml::Manifest;
 use std::path::PathBuf;
-use ligen::utils::fs::copy;
-use std::{
-    process::{Command, Stdio},
-};
+use std::process::{Command, Stdio};
 
 #[derive(Debug, Clone)]
 pub struct WorkspaceMember {
@@ -45,8 +42,8 @@ fn main() {
             }
         } else {
             build(&environment).expect("Failed to build.");
-            copy_crate_libraries(&environment, &environment.arguments.manifest_path)
-                .expect("Couldn't copy libraries.");
+            // copy_crate_libraries(&environment, &environment.arguments.manifest_path)
+            //     .expect("Couldn't copy libraries.");
         }
     }
 }
@@ -89,8 +86,8 @@ pub fn build_workspace_member(
         .values
         .append(&mut vec!["--package".to_string(), member.clone().crate_name]);
     member_env.arguments.crate_name = member.crate_name;
-    build(&member_env)?;
-    copy_crate_libraries(&member_env, &member.toml_path)
+    build(&member_env)
+    // copy_crate_libraries(&member_env, &member.toml_path)
 }
 
 pub fn run(environment: &Environment, command: &str) -> Result<(), Error> {
@@ -123,43 +120,4 @@ pub fn build(environment: &Environment) -> Result<(), Error> {
 
 pub fn test(environment: &Environment) -> Result<(), Error> {
     run(environment, "test")
-}
-
-fn copy_crate_libraries(environment: &Environment, cargo_toml: &PathBuf) -> Result<(), Error> {
-    if cargo_toml.exists() {
-        let manifest = Manifest::from_path(cargo_toml)
-            .expect(&format!("Failed to parse {}", cargo_toml.display()));
-
-        let name = manifest
-            .package
-            .expect("Failed to parse package section from Cargo.toml")
-            .name;
-
-        let file_name = to_library_name_convention(&name);
-
-        let from_path = environment
-            .arguments
-            .target_dir
-            .join(environment.arguments.build_type.to_string().to_lowercase())
-            .join(&file_name);
-
-        let to_path = environment
-            .arguments
-            .target_dir
-            .join("ligen")
-            .join(&name)
-            .join("lib")
-            .join(file_name);
-
-        if from_path.exists() {
-            copy(&from_path, &to_path).expect(&format!(
-                "Failed to copy file from {:?} to {:?}",
-                from_path, to_path
-            ));
-        }
-
-        Ok(())
-    } else {
-        Err(Error::ExecutionFailure(-1))
-    }
 }

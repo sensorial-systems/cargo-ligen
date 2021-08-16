@@ -11,13 +11,3 @@ pub fn find_workspace_dir(path: &Path) -> Option<PathBuf> {
                 .map(|_| ancestor.to_path_buf())
         })
 }
-
-pub fn to_library_name_convention(name: &String) -> String {
-    #[cfg(target_family = "windows")]
-    let name = format!("{}.lib", name);
-
-    #[cfg(target_family = "unix")]
-    let name = format!("lib{}.a", name);
-
-    name
-}
