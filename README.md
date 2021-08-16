@@ -4,7 +4,7 @@ Cargo command for [LIGEN (Language Interface GENerator)](https://github.com/sens
 
 ### Requirements
 
-`rustup install nightly`
+`rustup toolchain install nightly`
 
 Note: There is no need to make it default.
 
